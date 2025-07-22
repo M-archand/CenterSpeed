@@ -1,0 +1,52 @@
+using System.Text.Json.Serialization;
+using CounterStrikeSharp.API.Core;
+
+namespace CenterSpeed
+{
+    public class PluginConfig : BasePluginConfig
+    {   
+        /////////////////////////////////////////////////////////////////////////////////
+
+        [JsonPropertyName("TextSettings")]
+        public TextSettings TextSettings { get; set; } = new TextSettings();
+
+        /////////////////////////////////////////////////////////////////////////////////
+        
+        [JsonPropertyName("Command")]
+        public string Command { get; set; } = "cs";
+
+        [JsonPropertyName("TickInterval")]
+        public int TickInterval { get; set; } = 4;
+
+        [JsonPropertyName("DisableCrosshair")]
+        public bool DisableCrosshair { get; set; } = true;
+
+        [JsonPropertyName("Use2DSpeed")]
+        public bool Use2DSpeed { get; set; } = true;
+
+        [JsonPropertyName("Channel")]
+        public byte Channel { get; set; } = 7;
+
+        [JsonPropertyName("EnableDatabase")]
+        public bool EnableDatabase { get; set; } = false;
+
+        [JsonPropertyName("ConfigVersion")]
+        public override int Version { get; set; } = 1;
+    }
+
+    public sealed class TextSettings
+    {
+        [JsonPropertyName("Size")]
+        public int Size { get; set; } = 16;
+
+        [JsonPropertyName("Font")]
+        public string Font { get; set; } = "Arial";
+
+        [JsonPropertyName("Color")]
+        public string Color { get; set; } = "Salmon";
+
+        [JsonPropertyName("Position")]
+        public float Position { get; set; } = 0F;
+
+    }
+}
