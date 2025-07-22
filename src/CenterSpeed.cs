@@ -18,7 +18,7 @@ namespace CenterSpeed
 
         public required PluginConfig Config { get; set; } = new PluginConfig();
         static IGameHUDAPI? _api;
-        private readonly HashSet<int> _speedHudSlots = new();
+        private readonly HashSet<ulong> _enabledSteamIDs = new();
 
         public override void OnAllPluginsLoaded(bool hotReload)
         {
@@ -51,7 +51,7 @@ namespace CenterSpeed
                 Logger.LogError($"Configured Channel {Config.Channel} is out of range (0-32). Falling back to channel 17.");
                 Config.Channel = 17;
             }
-            
+
             if (config.Version < Config.Version)
                 Logger.LogError($"Configuration version mismatch (Expected: {0} | Current: {1})", Config.Version, config.Version);
         }
@@ -71,15 +71,10 @@ namespace CenterSpeed
             if (Server.TickCount % interval != 0)
                 return;
 
-            foreach (int slot in _speedHudSlots)
+            foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && _enabledSteamIDs.Contains(p.SteamID)))
             {
-                var player = Utilities.GetPlayerFromSlot(slot);
-                if (player == null || !player.IsValid) 
-                    continue;
-
                 var pawnHandle = player.PlayerPawn;
-                if (pawnHandle == null || !pawnHandle.IsValid || pawnHandle.Value == null)
-                    continue;
+                if (pawnHandle == null || !pawnHandle.IsValid || pawnHandle.Value == null) continue;
 
                 Vector playerSpeed = pawnHandle.Value.AbsVelocity;
                 string formatted = Math.Round(Config.Use2DSpeed ? playerSpeed.Length2D() : playerSpeed.Length()).ToString("0000");
@@ -92,13 +87,13 @@ namespace CenterSpeed
         {
             if (_api == null || player == null || !player.IsValid) return;
 
-            int slot = player.Slot;
+            ulong steamId = player.SteamID;
             byte channel = Config.Channel;
 
-            if (_speedHudSlots.Contains(slot)) // Turn centerspeed off
+            if (_enabledSteamIDs.Contains(steamId)) // Turn centerspeed off
             {
                 _api.Native_GameHUD_Remove(player, channel);
-                _speedHudSlots.Remove(slot);
+                _enabledSteamIDs.Remove(steamId);
 
                 if (Config.DisableCrosshair)
                     player.ReplicateConVar("weapon_reticle_knife_show", "true");
@@ -108,7 +103,7 @@ namespace CenterSpeed
             else // Turn centerspeed on
             {
                 ApplyCenterSpeedHud(player);
-                _speedHudSlots.Add(slot);
+                _enabledSteamIDs.Add(steamId);
 
                 if (Config.DisableCrosshair)
                     player.ReplicateConVar("weapon_reticle_knife_show", "false");
@@ -139,8 +134,7 @@ namespace CenterSpeed
         private HookResult OnPlayerReady(EventPlayerConnectFull @event, GameEventInfo info)
         {
             var player = @event.Userid!;
-
-            if (_speedHudSlots.Contains(player.Slot))
+            if (_enabledSteamIDs.Contains(player.SteamID))
                 ApplyCenterSpeedHud(player);
             return HookResult.Continue;
         }
@@ -148,11 +142,8 @@ namespace CenterSpeed
         [GameEventHandler(mode: HookMode.Post)]
         private HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
         {
-            foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid))
-            {
-                if (_speedHudSlots.Contains(p.Slot))
-                    Server.NextFrame(() => ApplyCenterSpeedHud(p));
-            }
+            foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && _enabledSteamIDs.Contains(p.SteamID)))
+                Server.NextFrame(() => ApplyCenterSpeedHud(p));
             return HookResult.Continue;
         }
     }
