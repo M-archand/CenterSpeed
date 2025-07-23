@@ -23,7 +23,7 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Install dependencies
-      run: dotnet add package CounterStrikeSharpAPI --version 1.0.328
+      run: dotnet add package CounterStrikeSharp.API --version 1.0.328
     - name: Build
       run: dotnet build --no-restore
     - name: Test
