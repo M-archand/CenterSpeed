@@ -27,9 +27,6 @@ namespace CenterSpeed
         [JsonPropertyName("Channel")]
         public byte Channel { get; set; } = 7;
 
-        [JsonPropertyName("EnableDatabase")]
-        public bool EnableDatabase { get; set; } = false;
-
         [JsonPropertyName("ConfigVersion")]
         public override int Version { get; set; } = 1;
     }
