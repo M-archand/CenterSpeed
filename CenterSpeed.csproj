@@ -17,5 +17,9 @@
       <HintPath>CS2-GameHUDAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Clientprefs">
+      <HintPath>ClientprefsApi.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 </Project>
