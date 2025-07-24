@@ -8,7 +8,7 @@ using CS2_GameHUDAPI;
 using Clientprefs.API;
 using System.Drawing;
 using Microsoft.Extensions.Logging;
-using System.Reflection;
+using System.Text.Json;
 
 namespace CenterSpeed
 {
@@ -23,7 +23,7 @@ namespace CenterSpeed
         private IClientprefsApi? _prefs;
         private readonly HashSet<ulong> _enabledSteamIDs = new();
 
-        private int _centerSpeedCookieId = -1;
+        private int _configCookieId = -1;
 
         public override void OnAllPluginsLoaded(bool hotReload)
         {
@@ -86,13 +86,14 @@ namespace CenterSpeed
 
         private void OnPlayerPreferencesLoaded(CCSPlayerController player)
         {
-            if (_centerSpeedCookieId < 0)
+            if (_configCookieId < 0 || _prefs == null)
                 return;
 
-            var val = _prefs!.GetPlayerCookie(player, _centerSpeedCookieId);
-            if (val.Equals("true", StringComparison.OrdinalIgnoreCase))
+            var settings = LoadSettings(player);
+            if (settings.Enabled)
             {
                 ApplyCenterSpeedHud(player);
+
                 if (Config.DisableCrosshair)
                     player.ReplicateConVar("weapon_reticle_knife_show", "false");
             }
@@ -100,22 +101,60 @@ namespace CenterSpeed
         
         private void OnClientprefsDatabaseReady()
         {
-            _centerSpeedCookieId = _prefs!.RegPlayerCookie("centerspeed_enabled","Whether CenterSpeed is enabled", CookieAccess.CookieAccess_Public);
+            _configCookieId = _prefs!.RegPlayerCookie("centerspeed_config", "JSON CenterSpeed settings", CookieAccess.CookieAccess_Public);
+        }
+
+        private class CenterSpeedSettings
+        {
+            public bool Enabled { get; set; } = false;
+            public string Color { get; set; } = "";
+            public int? Size { get; set; } = null;
+            public float? Position { get; set; } = null;
+        }
+        
+        private CenterSpeedSettings LoadSettings(CCSPlayerController player)
+        {
+            string raw = _prefs!.GetPlayerCookie(player, _configCookieId) ?? "{}";
+            CenterSpeedSettings settings;
+            try
+            {
+                settings = JsonSerializer.Deserialize<CenterSpeedSettings>(raw) ?? new CenterSpeedSettings();
+            }
+            catch
+            {
+                settings = new CenterSpeedSettings();
+            }
+            return settings;
+        }
+
+        private void SaveSettings(CCSPlayerController player, CenterSpeedSettings s)
+        {
+            string raw = JsonSerializer.Serialize(s);
+            _prefs!.SetPlayerCookie(player, _configCookieId, raw);
         }
         
         private bool IsCenterSpeedEnabled(CCSPlayerController player)
         {
-            if (!player.IsValid) 
+            if (!player.IsValid)
                 return false;
 
-            if (_prefs != null && _centerSpeedCookieId >= 0)
+            if (_prefs != null && _configCookieId >= 0 && !_prefs.ArePlayerCookiesCached(player))
             {
-                return _prefs
-                    .GetPlayerCookie(player, _centerSpeedCookieId)
-                    .Equals("true", StringComparison.OrdinalIgnoreCase);
+                try
+                {
+                    string raw = _prefs.GetPlayerCookie(player, _configCookieId);
+                    if (!string.IsNullOrEmpty(raw))
+                    {
+                        var settings = JsonSerializer.Deserialize<CenterSpeedSettings>(raw) ?? new CenterSpeedSettings();
+                        return settings.Enabled;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"CenterSpeed: failed to read Clientprefs cookie for {player.PlayerName} ({player.SteamID}): {ex.Message}");
+                }
             }
 
-            // Fallback to in-memory SteamID tracking if no Clientprefs
             return _enabledSteamIDs.Contains(player.SteamID);
         }
 
@@ -144,66 +183,50 @@ namespace CenterSpeed
             if (_api == null || player == null || !player.IsValid) return;
 
             byte channel = Config.Channel;
+            bool currentlyEnabled = IsCenterSpeedEnabled(player);
+            bool newEnabled = !currentlyEnabled;
 
-            bool enabled = IsCenterSpeedEnabled(player); // Turn centerspeed off
-            if (enabled)
+            if (_prefs != null && _configCookieId >= 0)
             {
+                var settings = LoadSettings(player);
+                settings.Enabled = newEnabled;
+                SaveSettings(player, settings);
+            }
+            else
+            {
+                if (newEnabled) 
+                    _enabledSteamIDs.Add(player.SteamID);
+                else 
+                    _enabledSteamIDs.Remove(player.SteamID);
+            }
+
+            if (newEnabled)
+                ApplyCenterSpeedHud(player);
+            else
                 _api.Native_GameHUD_Remove(player, channel);
 
-                if (_prefs != null && _centerSpeedCookieId >= 0)
-                    _prefs.SetPlayerCookie(player, _centerSpeedCookieId, "false");
-                else
-                    _enabledSteamIDs.Remove(player.SteamID);
+            if (Config.DisableCrosshair)
+                player.ReplicateConVar("weapon_reticle_knife_show", newEnabled ? "false" : "true");
 
-                if (Config.DisableCrosshair)
-                    player.ReplicateConVar("weapon_reticle_knife_show", "true");
-
-                player.PrintToChat($"CenterSpeed: {ChatColors.LightRed}DISABLED");
-            }
-            else // Turn centerspeed on
-            {
-                ApplyCenterSpeedHud(player);
-
-                if (_prefs != null && _centerSpeedCookieId >= 0)
-                {
-                    _prefs.SetPlayerCookie(player, _centerSpeedCookieId, "true");
-
-                    var pluginField = _prefs.GetType()
-                        .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
-                        .FirstOrDefault(f => f.FieldType.Name == "Clientprefs");
-                    if (pluginField != null)
-                    {
-                        var pluginInst = pluginField.GetValue(_prefs)!;
-                        var saveMethod = pluginInst.GetType()
-                            .GetMethod("SavePlayerCookies",
-                                    BindingFlags.NonPublic | BindingFlags.Instance,
-                                    null,
-                                    new[]{ typeof(string) },
-                                    null);
-                        saveMethod?.Invoke(pluginInst, new object[]{ player.SteamID.ToString() });
-                    }
-                }
-                else
-                {
-                    _enabledSteamIDs.Add(player.SteamID);
-                }
-
-                if (Config.DisableCrosshair)
-                    player.ReplicateConVar("weapon_reticle_knife_show", "false");
-
-                player.PrintToChat($"CenterSpeed: {ChatColors.Lime}ENABLED");
-            }
+            var color = newEnabled ? ChatColors.Lime : ChatColors.LightRed;
+            var word  = newEnabled ? "ENABLED" : "DISABLED";
+            player.PrintToChat($"CenterSpeed: {color}{word}");
         }
 
         private void ApplyCenterSpeedHud(CCSPlayerController player)
         {
+            var settings = (_prefs != null && _configCookieId >= 0)
+                ? LoadSettings(player)
+                : new CenterSpeedSettings { Enabled = true };
+
             Vector playerSpeed = player.PlayerPawn!.Value!.AbsVelocity;
             string vel = Math.Round(Config.Use2DSpeed ? playerSpeed.Length2D() : playerSpeed.Length()).ToString("0000");
 
-            float height  = Config.TextSettings.Position;
+            float height  = settings.Position ?? Config.TextSettings.Position;
             var position  = new Vector(0.0F, height, 7.0F);
-            Color color   = Color.FromName(Config.TextSettings.Color);
-            int size      = Config.TextSettings.Size;
+            string c      = string.IsNullOrEmpty(settings.Color) ? Config.TextSettings.Color : settings.Color;
+            Color color   = Color.FromName(c);
+            int size      = settings.Size ?? Config.TextSettings.Size;
             string font   = Config.TextSettings.Font;
             float scale   = size / 7000.0F;
             var justifyH  = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_CENTER;
