@@ -24,6 +24,9 @@ namespace CenterSpeed
         [JsonPropertyName("Use2DSpeed")]
         public bool Use2DSpeed { get; set; } = true;
 
+        [JsonPropertyName("MenuType")]
+        public string MenuType { get; set; } = "WasdMenu";
+
         [JsonPropertyName("Channel")]
         public byte Channel { get; set; } = 7;
 

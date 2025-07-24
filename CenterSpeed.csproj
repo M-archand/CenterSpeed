@@ -13,6 +13,7 @@
         <ExcludeAssets>runtime</ExcludeAssets>
         <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="CS2MenuManager" Version="1.0.36" />
     <Reference Include="CS2_GameHUDAPI">
       <HintPath>CS2-GameHUDAPI.dll</HintPath>
       <Private>false</Private>

@@ -6,6 +6,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API;
 using CS2_GameHUDAPI;
 using Clientprefs.API;
+using CS2MenuManager.API.Class;
 using System.Drawing;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -22,6 +23,7 @@ namespace CenterSpeed
         static IGameHUDAPI? _api;
         private IClientprefsApi? _prefs;
         private readonly HashSet<ulong> _enabledSteamIDs = new();
+        private bool _hasMenuManager;
 
         private int _configCookieId = -1;
 
@@ -48,12 +50,25 @@ namespace CenterSpeed
             catch
             {
                 _prefs = null;
+                Server.PrintToConsole("[CenterSpeed] Clientprefs not found! CenterSpeed on/off will be reset whenever the server restarts.");
             }
 
             if (_prefs != null) // Hook Clientprefs events
             {
                 _prefs.OnDatabaseLoaded += OnClientprefsDatabaseReady;
                 _prefs.OnPlayerCookiesCached += OnPlayerPreferencesLoaded;
+            }
+
+            // Check for CS2MenuManager installation
+            try
+            {
+                var dummy = MenuManager.MenuTypesList;
+                _hasMenuManager = true;
+            }
+            catch (Exception)
+            {
+                _hasMenuManager = false;
+                Server.PrintToConsole("[CenterSpeed] CS2MenuManager API not found! CenterSpeed menu command has been disabled.");
             }
 
             RegisterListener<Listeners.OnTick>(PlayerOnTick);
@@ -67,7 +82,7 @@ namespace CenterSpeed
 
             var aliases = Config.Command.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim());
             foreach (var alias in aliases)
-                AddCommand($"css_{alias}", "The command used to show the center speed", OnCenterSpeedCommand);
+                AddCommand($"css_{alias}", "Toggle CenterSpeed or open its menu", OnAliasCommand);
 
             if (Config.Channel > 32)
             {
@@ -77,6 +92,13 @@ namespace CenterSpeed
 
             if (config.Version < Config.Version)
                 Logger.LogError($"Configuration version mismatch (Expected: {0} | Current: {1})", Config.Version, config.Version);
+
+            // Validate Config.MenuType
+            if (!MenuManager.MenuTypesList.ContainsKey(Config.MenuType))
+            {
+                Logger.LogError($"Invalid MenuType `{Config.MenuType}`, defaulting to “ScreenMenu”");
+                Config.MenuType = "WasdMenu";
+            }
         }
 
         public override void Unload(bool hotReload)
@@ -98,20 +120,12 @@ namespace CenterSpeed
                     player.ReplicateConVar("weapon_reticle_knife_show", "false");
             }
         }
-        
+
         private void OnClientprefsDatabaseReady()
         {
             _configCookieId = _prefs!.RegPlayerCookie("centerspeed_config", "JSON CenterSpeed settings", CookieAccess.CookieAccess_Public);
         }
 
-        private class CenterSpeedSettings
-        {
-            public bool Enabled { get; set; } = false;
-            public string Color { get; set; } = "";
-            public int? Size { get; set; } = null;
-            public float? Position { get; set; } = null;
-        }
-        
         private CenterSpeedSettings LoadSettings(CCSPlayerController player)
         {
             string raw = _prefs!.GetPlayerCookie(player, _configCookieId) ?? "{}";
@@ -132,7 +146,7 @@ namespace CenterSpeed
             string raw = JsonSerializer.Serialize(s);
             _prefs!.SetPlayerCookie(player, _configCookieId, raw);
         }
-        
+
         private bool IsCenterSpeedEnabled(CCSPlayerController player)
         {
             if (!player.IsValid)
@@ -178,6 +192,25 @@ namespace CenterSpeed
             }
         }
 
+        public void OnAliasCommand(CCSPlayerController? player, CommandInfo cmd)
+        {
+            if (_api == null || player == null || !player.IsValid)
+                return;
+
+            // If the player typed “css_{alias} menu”
+            if (cmd.ArgCount >= 1 && cmd.GetArg(1).Equals("menu", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_hasMenuManager)
+                    OnSpeedMenuCommand(player, cmd);
+                else
+                    player.PrintToChat("The CenterSpeed settings menu hasn't been enabled.");
+            }
+            else // "css_{alias}" with no args
+            {
+                OnCenterSpeedCommand(player, cmd);
+            }
+        }
+
         public void OnCenterSpeedCommand(CCSPlayerController? player, CommandInfo command)
         {
             if (_api == null || player == null || !player.IsValid) return;
@@ -194,9 +227,9 @@ namespace CenterSpeed
             }
             else
             {
-                if (newEnabled) 
+                if (newEnabled)
                     _enabledSteamIDs.Add(player.SteamID);
-                else 
+                else
                     _enabledSteamIDs.Remove(player.SteamID);
             }
 
@@ -209,7 +242,7 @@ namespace CenterSpeed
                 player.ReplicateConVar("weapon_reticle_knife_show", newEnabled ? "false" : "true");
 
             var color = newEnabled ? ChatColors.Lime : ChatColors.LightRed;
-            var word  = newEnabled ? "ENABLED" : "DISABLED";
+            var word = newEnabled ? "ENABLED" : "DISABLED";
             player.PrintToChat($"CenterSpeed: {color}{word}");
         }
 
@@ -222,19 +255,19 @@ namespace CenterSpeed
             Vector playerSpeed = player.PlayerPawn!.Value!.AbsVelocity;
             string vel = Math.Round(Config.Use2DSpeed ? playerSpeed.Length2D() : playerSpeed.Length()).ToString("0000");
 
-            float height  = settings.Position ?? Config.TextSettings.Position;
-            var position  = new Vector(0.0F, height, 7.0F);
-            string c      = string.IsNullOrEmpty(settings.Color) ? Config.TextSettings.Color : settings.Color;
-            Color color   = Color.FromName(c);
-            int size      = settings.Size ?? Config.TextSettings.Size;
-            string font   = Config.TextSettings.Font;
-            float scale   = size / 7000.0F;
-            var justifyH  = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_CENTER;
-            var justifyV  = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_CENTER;
+            float height = settings.Position ?? Config.TextSettings.Position;
+            var position = new Vector(0.0F, height, 7.0F);
+            string c = string.IsNullOrEmpty(settings.Color) ? Config.TextSettings.Color : settings.Color;
+            Color color = Color.FromName(c);
+            int size = settings.Size ?? Config.TextSettings.Size;
+            string font = Config.TextSettings.Font;
+            float scale = size / 7000.0F;
+            var justifyH = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_CENTER;
+            var justifyV = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_CENTER;
 
             _api!.Native_GameHUD_SetParams(player, Config.Channel, position, color, size, font, scale, justifyH, justifyV);
             _api.Native_GameHUD_ShowPermanent(player, Config.Channel, vel);
-            
+
             if (Config.DisableCrosshair)
                 player.ReplicateConVar("weapon_reticle_knife_show", "false");
         }
@@ -269,6 +302,14 @@ namespace CenterSpeed
                 });
             }
             return HookResult.Continue;
+        }
+        
+        private class CenterSpeedSettings
+        {
+            public bool Enabled { get; set; } = false;
+            public string Color { get; set; } = "";
+            public int? Size { get; set; } = null;
+            public float? Position { get; set; } = null;
         }
     }
 }
