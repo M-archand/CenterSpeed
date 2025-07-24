@@ -13,7 +13,7 @@ namespace CenterSpeed
         /////////////////////////////////////////////////////////////////////////////////
         
         [JsonPropertyName("Command")]
-        public string Command { get; set; } = "cs";
+        public string Command { get; set; } = "cs,centerspeed";
 
         [JsonPropertyName("TickInterval")]
         public int TickInterval { get; set; } = 4;
@@ -34,13 +34,13 @@ namespace CenterSpeed
     public sealed class TextSettings
     {
         [JsonPropertyName("Size")]
-        public int Size { get; set; } = 16;
+        public int Size { get; set; } = 40;
 
         [JsonPropertyName("Font")]
         public string Font { get; set; } = "Arial";
 
         [JsonPropertyName("Color")]
-        public string Color { get; set; } = "Salmon";
+        public string Color { get; set; } = "White";
 
         [JsonPropertyName("Position")]
         public float Position { get; set; } = 0F;
