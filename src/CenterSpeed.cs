@@ -23,9 +23,8 @@ namespace CenterSpeed
         static IGameHUDAPI? _api;
         private IClientprefsApi? _prefs;
         private readonly HashSet<ulong> _enabledSteamIDs = new();
-        private bool _hasMenuManager;
-
         private int _configCookieId = -1;
+        private bool _hasMenuManager;
 
         public override void OnAllPluginsLoaded(bool hotReload)
         {
@@ -116,7 +115,8 @@ namespace CenterSpeed
             {
                 ApplyCenterSpeedHud(player);
 
-                if (Config.DisableCrosshair)
+                bool hide = (_prefs != null && _configCookieId >= 0) ? settings.DisableCrosshair : Config.DisableCrosshair;
+                if (hide)
                     player.ReplicateConVar("weapon_reticle_knife_show", "false");
             }
         }
@@ -238,8 +238,12 @@ namespace CenterSpeed
             else
                 _api.Native_GameHUD_Remove(player, channel);
 
-            if (Config.DisableCrosshair)
-                player.ReplicateConVar("weapon_reticle_knife_show", newEnabled ? "false" : "true");
+            var s = (_prefs != null && _configCookieId >= 0)
+                ? LoadSettings(player)
+                : new CenterSpeedSettings { DisableCrosshair = Config.DisableCrosshair };
+
+            bool hide = s.DisableCrosshair;
+            player.ReplicateConVar("weapon_reticle_knife_show", newEnabled && hide ? "false" : "true");
 
             var color = newEnabled ? ChatColors.Lime : ChatColors.LightRed;
             var word = newEnabled ? "ENABLED" : "DISABLED";
@@ -268,8 +272,8 @@ namespace CenterSpeed
             _api!.Native_GameHUD_SetParams(player, Config.Channel, position, color, size, font, scale, justifyH, justifyV);
             _api.Native_GameHUD_ShowPermanent(player, Config.Channel, vel);
 
-            if (Config.DisableCrosshair)
-                player.ReplicateConVar("weapon_reticle_knife_show", "false");
+            bool hide = (_prefs != null && _configCookieId >= 0) ? settings.DisableCrosshair : Config.DisableCrosshair;
+            player.ReplicateConVar("weapon_reticle_knife_show", hide ? "false" : "true");
         }
 
         [GameEventHandler(mode: HookMode.Post)]
@@ -303,13 +307,14 @@ namespace CenterSpeed
             }
             return HookResult.Continue;
         }
-        
+
         private class CenterSpeedSettings
         {
             public bool Enabled { get; set; } = false;
             public string Color { get; set; } = "";
             public int? Size { get; set; } = null;
             public float? Position { get; set; } = null;
+            public bool DisableCrosshair { get; set; } = true;
         }
     }
 }

@@ -22,6 +22,7 @@ namespace CenterSpeed
             main.AddItem("Color", (p, opt) => OpenColorMenu(p, main));
             main.AddItem("Size", (p, opt) => OpenSizeMenu(p, main));
             main.AddItem("Position", (p, opt) => OpenPositionMenu(p, main));
+            main.AddItem("Crosshair",(p,_) => OpenCrosshairMenu(p, main));
 
             // Show it until they exit
             main.Display(player, 0);
@@ -134,6 +135,33 @@ namespace CenterSpeed
 
             up.PostSelectAction = PostSelectAction.Nothing;
             down.PostSelectAction = PostSelectAction.Nothing;
+
+            menu.Display(player, 0);
+        }
+
+        private void OpenCrosshairMenu(CCSPlayerController player, IMenu parent)
+        {
+            var menu = MenuManager.MenuByType(Config.MenuType, "Knife Crosshair", this);
+            menu.PrevMenu = parent;
+
+            var disable = menu.AddItem("Hide Crosshair", (p,_) =>
+            {
+                var settings = LoadSettings(p);
+                settings.DisableCrosshair = true;
+                SaveSettings(p, settings);
+                ApplyCenterSpeedHud(p);
+            });
+
+            var enable  = menu.AddItem("Show Crosshair", (p,_) =>
+            {
+                var settings = LoadSettings(p);
+                settings.DisableCrosshair = false;
+                SaveSettings(p, settings);
+                ApplyCenterSpeedHud(p);
+            });
+
+            disable.PostSelectAction = PostSelectAction.Nothing;
+            enable.PostSelectAction  = PostSelectAction.Nothing;
 
             menu.Display(player, 0);
         }
