@@ -37,7 +37,7 @@ namespace CenterSpeed
             catch (Exception)
             {
                 _api = null;
-                Logger.LogError("CS2-GameHUDAPI failed to load! Did you make sure to install it?");
+                Logger.LogInformation("CS2-GameHUDAPI failed to load! Did you make sure to install it?");
             }
 
             // Check for Clientprefs installation
@@ -85,17 +85,17 @@ namespace CenterSpeed
 
             if (Config.Channel > 32)
             {
-                Logger.LogError($"Configured Channel {Config.Channel} is out of range (0-32). Falling back to channel 7.");
+                Logger.LogWarning($"Configured Channel {Config.Channel} is out of range (0-32). Falling back to channel 7.");
                 Config.Channel = 7;
             }
 
             if (config.Version < Config.Version)
-                Logger.LogError($"Configuration version mismatch (Expected: {0} | Current: {1})", Config.Version, config.Version);
+                Logger.LogWarning($"Configuration version mismatch (Expected: {0} | Current: {1})", Config.Version, config.Version);
 
             // Validate Config.MenuType
             if (!MenuManager.MenuTypesList.ContainsKey(Config.MenuType))
             {
-                Logger.LogError($"Invalid MenuType `{Config.MenuType}`, defaulting to “ScreenMenu”");
+                Logger.LogWarning($"Invalid MenuType `{Config.MenuType}`, defaulting to “ScreenMenu”");
                 Config.MenuType = "WasdMenu";
             }
         }
@@ -119,6 +119,8 @@ namespace CenterSpeed
                 if (hide)
                     player.ReplicateConVar("weapon_reticle_knife_show", "false");
             }
+            if (!IsCenterSpeedEnabled(player))
+                WarmUpHud(player);
         }
 
         private void OnClientprefsDatabaseReady()
@@ -274,6 +276,29 @@ namespace CenterSpeed
 
             bool hide = (_prefs != null && _configCookieId >= 0) ? settings.DisableCrosshair : Config.DisableCrosshair;
             player.ReplicateConVar("weapon_reticle_knife_show", hide ? "false" : "true");
+        }
+
+        private void WarmUpHud(CCSPlayerController player)
+        {
+            if (_api == null || !player.IsValid) return;
+
+            var settings = (_prefs != null && _configCookieId >= 0)
+                ? LoadSettings(player)
+                : new CenterSpeedSettings { Enabled = true };
+
+            float height = settings.Position ?? Config.TextSettings.Position;
+            var position = new Vector(0.0F, height, 7.0F);
+            string c = string.IsNullOrEmpty(settings.Color) ? Config.TextSettings.Color : settings.Color;
+            Color color = Color.FromName(c);
+            int size = settings.Size ?? Config.TextSettings.Size;
+            string font = Config.TextSettings.Font;
+            float scale = size / 7000.0F;
+            var justifyH = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_CENTER;
+            var justifyV = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_CENTER;
+
+            _api!.Native_GameHUD_SetParams(player, Config.Channel, position, color, size, font, scale, justifyH, justifyV);
+            _api.Native_GameHUD_ShowPermanent(player, Config.Channel, "");
+            _api.Native_GameHUD_Remove(player, Config.Channel);
         }
 
         [GameEventHandler(mode: HookMode.Post)]
