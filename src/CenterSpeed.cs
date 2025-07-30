@@ -266,7 +266,7 @@ namespace CenterSpeed
             string c = string.IsNullOrEmpty(settings.Color) ? Config.TextSettings.Color : settings.Color;
             Color color = Color.FromName(c);
             int size = settings.Size ?? Config.TextSettings.Size;
-            string font = Config.TextSettings.Font;
+            string font = string.IsNullOrEmpty(settings.Font) ? Config.TextSettings.Font : settings.Font;
             float scale = size / 7000.0F;
             var justifyH = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_CENTER;
             var justifyV = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_CENTER;
@@ -291,7 +291,7 @@ namespace CenterSpeed
             string c = string.IsNullOrEmpty(settings.Color) ? Config.TextSettings.Color : settings.Color;
             Color color = Color.FromName(c);
             int size = settings.Size ?? Config.TextSettings.Size;
-            string font = Config.TextSettings.Font;
+            string font = string.IsNullOrEmpty(settings.Font) ? Config.TextSettings.Font : settings.Font;
             float scale = size / 7000.0F;
             var justifyH = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_CENTER;
             var justifyV = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_CENTER;
@@ -338,6 +338,7 @@ namespace CenterSpeed
             public bool Enabled { get; set; } = false;
             public string Color { get; set; } = "";
             public int? Size { get; set; } = null;
+            public string Font { get; set; } = "";
             public float? Position { get; set; } = null;
             public bool DisableCrosshair { get; set; } = true;
         }

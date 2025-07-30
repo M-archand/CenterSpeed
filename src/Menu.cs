@@ -19,10 +19,11 @@ namespace CenterSpeed
             var main = MenuManager.MenuByType(Config.MenuType, "CenterSpeed Settings", this);
 
             // Three top-level options
-            main.AddItem("Color", (p, opt) => OpenColorMenu(p, main));
-            main.AddItem("Size", (p, opt) => OpenSizeMenu(p, main));
+            main.AddItem("Color",    (p, opt) => OpenColorMenu(p, main));
+            main.AddItem("Size",     (p, opt) => OpenSizeMenu(p, main));
+            main.AddItem("Font",     (p, opt) => OpenFontMenu(p, main));
             main.AddItem("Position", (p, opt) => OpenPositionMenu(p, main));
-            main.AddItem("Crosshair",(p,_) => OpenCrosshairMenu(p, main));
+            main.AddItem("Crosshair",(p, opt) => OpenCrosshairMenu(p, main));
 
             // Show it until they exit
             main.Display(player, 0);
@@ -94,6 +95,27 @@ namespace CenterSpeed
             menu.Display(player, 0);
         }
 
+        private void OpenFontMenu(CCSPlayerController player, IMenu parent)
+        {
+            var menu = MenuManager.MenuByType(Config.MenuType, "Choose Font", this);
+            menu.PrevMenu = parent;
+
+            foreach (var fontName in _fonts)
+            {
+                var opt = menu.AddItem(fontName, (p, _) =>
+                {
+                    var settings = LoadSettings(p);
+                    settings.Font = fontName;
+                    SaveSettings(p, settings);
+                    ApplyCenterSpeedHud(p);
+                });
+
+                opt.PostSelectAction = PostSelectAction.Nothing;
+            }
+
+            menu.Display(player, 0);
+        }
+
         private void OpenPositionMenu(CCSPlayerController player, IMenu parent)
         {
             var menu = MenuManager.MenuByType(Config.MenuType, "Choose Position", this);
@@ -144,7 +166,7 @@ namespace CenterSpeed
             var menu = MenuManager.MenuByType(Config.MenuType, "Knife Crosshair", this);
             menu.PrevMenu = parent;
 
-            var disable = menu.AddItem("Hide Crosshair", (p,_) =>
+            var disable = menu.AddItem("Hide Crosshair", (p, _) =>
             {
                 var settings = LoadSettings(p);
                 settings.DisableCrosshair = true;
@@ -152,7 +174,7 @@ namespace CenterSpeed
                 ApplyCenterSpeedHud(p);
             });
 
-            var enable  = menu.AddItem("Show Crosshair", (p,_) =>
+            var enable  = menu.AddItem("Show Crosshair", (p, _) =>
             {
                 var settings = LoadSettings(p);
                 settings.DisableCrosshair = false;
@@ -189,14 +211,34 @@ namespace CenterSpeed
         [
             ("Small",  40),
             ("Medium", 46),
-            ("Large",  52),
+            ("Large",  52)
+        ];
+
+        private readonly string[] _fonts =
+        [
+            "Arial",
+            "Arial Black",
+            "Arial Bold",
+            "Arial Narrow",
+            "Arial Unicode MS",
+            "Comic Sans MS",
+            "Courier New",
+            "HalfLife2",
+            "Lucida Console",
+            "MS Shell Dlg 2",
+            "Marlett",
+            "Stratum2",
+            "Tahoma",
+            "Times New Roman",
+            "Trebuchet MS",
+            "Verdana"
         ];
 
         private readonly (string label, float pos)[] _positions =
         [
             ("Top",     3.2f),
             ("Middle",  0.0f),
-            ("Bottom", -3.25f),
+            ("Bottom", -3.25f)
         ];
     }
 }
