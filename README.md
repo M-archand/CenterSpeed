@@ -11,7 +11,7 @@
 
   <p align="center">
     <br>
-    <a href="https://github.com/M-archand/CenterSpeed/releases/tag/1.0.0">Download</a>
+    <a href="https://github.com/M-archand/CenterSpeed/releases/tag/1.0.1">Download</a>
     <br><br>
     <a href="https://www.youtube.com/watch?v=w43JOy6iPXs">Demo (YouTube)</a>
   </p>
@@ -23,10 +23,10 @@
 
 To use this plugin, you'll need the following dependencies installed:
 
-- [**CounterStrikeSharp (Required)**](https://github.com/roflmuffin/CounterStrikeSharp): CounterStrikeSharp allows you to write server plugins in C# for Counter-Strike 2.
-- [**CS2-GameHUD (Required)**](https://github.com/darkerz7/CS2-GameHUD): A shared API used to create the world text.
+- [**CounterStrikeSharp v330+ (Required)**](https://github.com/roflmuffin/CounterStrikeSharp): CounterStrikeSharp allows you to write server plugins in C# for Counter-Strike 2.
+- [**CS2-GameHUD v1.DZ.2 (Required)**](https://github.com/darkerz7/CS2-GameHUD): A shared API used to create the world text.
 - [**Clientprefs (Optional)**](https://github.com/Cruze03/Clientprefs): A shared API that allows you to save the on/off cookie for each player to a database to have persistence between server restarts. Will automatically be used if it is installed, otherwise players will have to enable it again if the server restarts. If using CS2MenuManager, it will also save the other text settings here.
-- [**CS2MenuManager (Optional)**](https://github.com/schwarper/CS2MenuManager): A shared API used to manage the settings menu for the player. If not installed, the menu command won't be available and the player will use the settings you have defined in the config.
+- [**CS2MenuManager v39+ (Optional)**](https://github.com/schwarper/CS2MenuManager): A shared API used to manage the settings menu for the player. If not installed, the menu command won't be available and the player will use the settings you have defined in the config.
 
 <!-- CONFIG -->
 
@@ -55,6 +55,7 @@ Example:
 <!-- CONFIG -->
 
 ## Commands
+
 - !cs - Toggles centerspeed
 - !cs menu - Opens the settings menu (if CS2MenuManager is installed)
 - !cs is customizable in the config
@@ -62,7 +63,6 @@ Example:
 
 ## Roadmap
 
-- [ ] Add Font to player settings
 - [ ] Translations
 - [ ] Non OnTick based updates
 
