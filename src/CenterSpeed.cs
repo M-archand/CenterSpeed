@@ -17,7 +17,7 @@ namespace CenterSpeed
     {
         public override string ModuleName => "CenterSpeed";
         public override string ModuleAuthor => "Marchand";
-        public override string ModuleVersion => "1.0.0";
+        public override string ModuleVersion => "1.0.1";
 
         public required PluginConfig Config { get; set; } = new PluginConfig();
         static IGameHUDAPI? _api;
