@@ -1,5 +1,9 @@
 <a name="readme-top"></a>
 
+
+> [!WARNING]
+> Valve ruined this plugin with the July 28 update by removing CBaseViewModel from the game. So the speed text doesn't stay properly centered anymore. I'll update it if a new approach is found.
+
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -11,7 +15,7 @@
 
   <p align="center">
     <br>
-    <a href="https://github.com/M-archand/CenterSpeed/releases/tag/1.0.1">Download</a>
+    <a href="https://github.com/M-archand/CenterSpeed/releases">Download</a>
     <br><br>
     <a href="https://www.youtube.com/watch?v=w43JOy6iPXs">Demo (YouTube)</a>
   </p>
